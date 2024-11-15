@@ -1,57 +1,72 @@
 #include <iostream>
-#include "SerialPort.h"
+#include "./include/SerialPort.h"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
-using namespace std;
 
-char* portName = "\\\\.\\COM20";
+// Serial Port number
+char portName[] = "\\\\.\\COM8";
 
+// Buffer size for receiving data
 #define MAX_DATA_LENGTH 255
 
-char incomingData[MAX_DATA_LENGTH];
-
-//Control signals for turning on and turning off the led
-//Check arduino code
+// Control signals for turning on and turning off the LED
 char ledON[] = "ON\n";
 char ledOFF[] = "OFF\n";
 
-//Arduino SerialPort object
-SerialPort *arduino;
+// Blinking Delay
+#define BLINKING_DELAY_SECS 1
 
-//Blinking Delay
-const unsigned int BLINKING_DELAY = 1000;
+// Arduino SerialPort object
+SerialPort *arduino = NULL;
 
-//If you want to send data then define "SEND" else comment it out
-#define SEND
 
-void exampleReceiveData(void)
+
+void exampleReceiveData()
 {
-    int readResult = arduino->readSerialPort(incomingData, MAX_DATA_LENGTH);
-    printf("%s", incomingData);
+    char incomingData[MAX_DATA_LENGTH];
+    memset(incomingData, 0, sizeof(incomingData));
+    unsigned int charsRead = arduino->readSerialPort(incomingData, MAX_DATA_LENGTH);
+    if (charsRead > 0) {printf("<%s>(%u)\n", incomingData, charsRead);}
     Sleep(10);
 }
 
-void exampleWriteData(unsigned int delayTime)
+void exampleWriteData()
 {
-    arduino->writeSerialPort(ledON, MAX_DATA_LENGTH);
-    Sleep(delayTime);
-    arduino->writeSerialPort(ledOFF, MAX_DATA_LENGTH);
-    Sleep(delayTime);
+    static char state = 0;
+    if (state == 0) {
+        arduino->writeSerialPort(ledON, strlen(ledON));
+    } else {
+        arduino->writeSerialPort(ledOFF, strlen(ledOFF));
+    }
+    state = !state;
 }
 
 int main()
 {
     arduino = new SerialPort(portName);
 
-    //Checking if arduino is connected or not
+    // Checking if Arduino is connected or not
     if (arduino->isConnected()){
-        std::cout << "Connection established at port " << portName << endl;
+        printf("Connection established at port %s\n", portName);
+        printf("Press ESCAPE to finish:\n");
     }
 
-    #ifdef SEND
-        while(arduino->isConnected()) exampleWriteData(BLINKING_DELAY);
-    #else // SEND
-        while(arduino->isConnected()) exampleReceiveData();
-    #endif // SEND
+    // Loop for receiving data and sending commands
+    time_t clk = time(NULL);
+    while(arduino->isConnected() && !(GetAsyncKeyState(VK_ESCAPE) & 0x0001)) {
+        exampleReceiveData();
+        if (time(NULL) - clk >= BLINKING_DELAY_SECS) {
+            exampleWriteData();
+            clk = time(NULL);
+        }
+    }
+
+    delete arduino;
+
+    printf("Press ENTER to finish...");
+    scanf("%*c");
+
+    return 0;
 }

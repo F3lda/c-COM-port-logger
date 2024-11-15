@@ -5,7 +5,7 @@
 * LICENSE: MIT
 */
 
-#include "SerialPort.h"
+#include "../include/SerialPort.h"
 
 SerialPort::SerialPort(char *portName)
 {
@@ -18,33 +18,29 @@ SerialPort::SerialPort(char *portName)
                                 OPEN_EXISTING,
                                 FILE_ATTRIBUTE_NORMAL,
                                 NULL);
-    if (this->handler == INVALID_HANDLE_VALUE){
-        if (GetLastError() == ERROR_FILE_NOT_FOUND){
-            printf("ERROR: Handle was not attached. Reason: %s not available\n", portName);
+    if (this->handler == INVALID_HANDLE_VALUE) {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+            printf("ERROR: Port %s is not available!\n", portName);
+        } else if (GetLastError() == ERROR_ACCESS_DENIED) {
+            printf("ERROR: Access to %s was denied! Maybe used by another process.\n", portName);
+        } else {
+            printf("ERROR: %lu",GetLastError());
         }
-    else
-        {
-            printf("ERROR!!!");
-        }
-    }
-    else {
+    } else {
         DCB dcbSerialParameters = {0};
 
         if (!GetCommState(this->handler, &dcbSerialParameters)) {
-            printf("failed to get current serial parameters");
-        }
-        else {
+            printf("ERROR: failed to get current serial parameters");
+        } else {
             dcbSerialParameters.BaudRate = CBR_9600;
             dcbSerialParameters.ByteSize = 8;
             dcbSerialParameters.StopBits = ONESTOPBIT;
             dcbSerialParameters.Parity = NOPARITY;
             dcbSerialParameters.fDtrControl = DTR_CONTROL_ENABLE;
 
-            if (!SetCommState(handler, &dcbSerialParameters))
-            {
+            if (!SetCommState(handler, &dcbSerialParameters)) {
                 printf("ALERT: could not set Serial port parameters\n");
-            }
-            else {
+            } else {
                 this->connected = true;
                 PurgeComm(this->handler, PURGE_RXCLEAR | PURGE_TXCLEAR);
                 Sleep(ARDUINO_WAIT_TIME);
@@ -55,24 +51,25 @@ SerialPort::SerialPort(char *portName)
 
 SerialPort::~SerialPort()
 {
-    if (this->connected){
+    if (this->connected) {
         this->connected = false;
         CloseHandle(this->handler);
     }
 }
 
-int SerialPort::readSerialPort(char *buffer, unsigned int buf_size)
+unsigned int SerialPort::readSerialPort(char *buffer, unsigned int buf_size)
 {
     DWORD bytesRead;
     unsigned int toRead = 0;
 
     ClearCommError(this->handler, &this->errors, &this->status);
 
-    if (this->status.cbInQue > 0){
-        if (this->status.cbInQue > buf_size){
+    if (this->status.cbInQue > 0) {
+        if (this->status.cbInQue > buf_size) {
             toRead = buf_size;
+        } else {
+            toRead = this->status.cbInQue;
         }
-        else toRead = this->status.cbInQue;
     }
 
     if (ReadFile(this->handler, buffer, toRead, &bytesRead, NULL)) return bytesRead;
@@ -84,11 +81,11 @@ bool SerialPort::writeSerialPort(char *buffer, unsigned int buf_size)
 {
     DWORD bytesSend;
 
-    if (!WriteFile(this->handler, (void*) buffer, buf_size, &bytesSend, 0)){
+    if (!WriteFile(this->handler, (void*) buffer, buf_size, &bytesSend, 0)) {
         ClearCommError(this->handler, &this->errors, &this->status);
         return false;
     }
-    else return true;
+    return true;
 }
 
 bool SerialPort::isConnected()
