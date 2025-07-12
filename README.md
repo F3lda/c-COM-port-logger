@@ -1,82 +1,98 @@
-# SerialPort
+# COM Port Logger
 
-## C++ Library for Serial Communication with following criteria
+A sophisticated Windows COM port logger with real-time CLI input, intelligent console management, and configurable baud rates.
 
-* Plain C++ Compatible
-* Windows Supported
-* Include and Run Type Library
-* supports softwareserial
-* supports serial event
-* fixed minor bugs
+## Features
 
-## Documentation
-[Here is a blog post about the library](https://medium.com/@ManashMandal/serial-communication-with-an-arduino-using-c-on-windows-d08710186498#.f94efw74b)
+- **Multi-threaded Design**: Simultaneous COM port monitoring and user input
+- **Smart Line Buffering**: Only displays complete lines or when buffer is full
+- **Sophisticated Console**: Clean line management that preserves user input while displaying COM data
+- **Device Discovery**: Lists available COM devices with descriptions
+- **Configurable Baud Rates**: Choose from common rates (9600-921600) or set custom values
+- **File Logging**: Optional timestamped logging to file
+- **Thread-Safe**: Robust mutex-based synchronization
 
-### Initialization
-```cpp
-#include "SerialPort.h"
-#include <iostream>
+## Usage
 
-char* portName = "\\\\.\\COM20";
+0. **Compile using Makefile**
+   ```
+   make          # Build the project
+   ```
 
-//Declare a global object
-SerialPort *arduino;
+1. **Start the program**
+   ```
+   ./comlogger.exe
+   ```
 
-int main(void)
-{
-  arduino = new SerialPort(portName);
-  std::cout << "is connected: " << arduino->isConnected() << std::endl;
-}
+2. **Device Discovery**
+   - Program automatically lists available COM devices
+   - Shows both device descriptions and port availability
+
+3. **Connect to COM Port**
+   - Enter desired COM port number (1-20)
+   - Select baud rate from menu:
+     - Common rates: 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600
+     - Custom rate: Enter any value
+   - Program establishes connection and starts logging
+
+4. **Commands**
+   - Type any text and press Enter to send to COM port
+   - `quit` - Exit the program
+   - `log on` - Enable file logging (creates timestamped file)
+   - `log off` - Disable file logging
+   - `baud` - Display current baud rate
+   - Press ESC to quit
+
+## Interface
+
+```
+[2025-07-12 14:30:15] RX: Sensor data: 25.3°C
+[2025-07-12 14:30:16] TX: status
+[2025-07-12 14:30:16] RX: Device OK
+> hello wor█
 ```
 
-### Sending Data
-```cpp
-#define DATA_LENGTH 255
+The interface intelligently manages console output:
+- COM data appears immediately with timestamps
+- User input line is preserved and restored
+- Clean separation between received and transmitted data
 
-#include "SerialPort.h"
-#include <iostream>
+## File Structure
 
-char* portName = "\\\\.\\COM20";
-
-//Declare a global object
-SerialPort *arduino;
-
-//Here '\n' is a delimiter 
-char *sendString = "Hello World\n"; 
-
-int main(void)
-{
-  arduino = new SerialPort(portName);
-  if (arduino->isConnected()){
-    bool hasWritten = arduino->writeSerialPort(sendString, DATA_LENGTH);
-    if (hasWritten) std::cout << "Data Written Successfully" << std::endl;
-    else std::cout << "Data was not written" << std::endl;
-  }
-}
+```
+├── main.cpp                    # Main application
+├── SerialPort/                 # SerialPort library folder
+│   ├── SerialPort.hpp         # Serial port header
+│   └── SerialPort.cpp         # Serial port implementation
+├── Makefile                   # Build configuration
+└── README.md                  # This file
 ```
 
-### Receiving Data
-```cpp
-#define DATA_LENGTH 255
+## Configuration
 
-#include "SerialPort.h"
-#include <iostream>
+- **Baud Rate**: User selectable (9600-921600 + custom)
+- **Data Bits**: 8
+- **Stop Bits**: 1
+- **Parity**: None
+- **Buffer Size**: 512 bytes
+- **Max Input**: 256 characters
 
-char* portName = "\\\\.\\COM20";
+## Technical Details
 
-//Declare a global object
-SerialPort *arduino;
+- Uses Windows Console API for reliable console management
+- Thread-safe operations with mutex synchronization
+- Line-based buffering for complete data integrity
+- Automatic device scanning using WMI queries
+- Graceful cleanup on exit
 
-//Here '\n' is a delimiter 
-char receivedString[DATA_LENGTH];
+## Error Handling
 
-int main(void)
-{
-  arduino = new SerialPort(portName);
-  if (arduino->isConnected()){
-    int hasRead = arduino->readSerialPort(receivedString, DATA_LENGTH);
-    if (hasRead) printf("%s", receivedString);
-    else printf("Error occured reading data");
-  }
-}
-```
+- Connection failure detection
+- Port access denied handling
+- Write operation error reporting
+- Thread synchronization safety
+- Graceful shutdown procedures
+
+## License
+
+MIT License - Feel free to modify and distribute.

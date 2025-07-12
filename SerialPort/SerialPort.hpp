@@ -3,8 +3,8 @@
 * Modified Library introduced in Arduino Playground which does not work
 * This works perfectly
 * LICENSE: MIT
+* Updated: 2025-07-12 by F3lda
 */
-
 
 #ifndef SERIALPORT_H
 #define SERIALPORT_H
@@ -20,15 +20,18 @@ class SerialPort
 private:
     HANDLE handler;
     bool connected;
+    int error;
     COMSTAT status;
     DWORD errors;
 public:
-    SerialPort(char *portName);
+    SerialPort(char *portName, DWORD baudRate);
     ~SerialPort();
 
-    unsigned int readSerialPort(char *buffer, unsigned int buf_size);
+    int readSerialPort(char *buffer, unsigned int buf_size);
     bool writeSerialPort(char *buffer, unsigned int buf_size);
+    void disconnect();
     bool isConnected();
+    int getError();
 };
 
 #endif // SERIALPORT_H
